@@ -1,10 +1,19 @@
 import os
-# إزالة متغيرات البروكسي فوراً في السطر الأول قبل استيراد أي مكتبة لتعطيل خطأ httplib2
+# إزالة متغيرات البروكسي فوراً لمنع تداخلها
 for proxy_env in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
     os.environ.pop(proxy_env, None)
 
 import random
 import sys
+import httplib2
+
+# تصحيح جذري وحاسم لخطأ KeyError: 'https' في مكتبة httplib2
+try:
+    if 'https' not in httplib2.SCHEME_TO_CONNECTION:
+        from httplib2 import HTTPSConnectionWithTimeout
+        httplib2.SCHEME_TO_CONNECTION['https'] = HTTPSConnectionWithTimeout
+except Exception:
+    pass
 
 from google import genai
 from google.oauth2.credentials import Credentials
