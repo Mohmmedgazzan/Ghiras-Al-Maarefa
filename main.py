@@ -1,24 +1,70 @@
 import os
 import random
+import sys
+
 from google import genai
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-# 1. جلب الأسرار من بيئة التشغيل
+
+# =========================================================
+# 1. الإعدادات والمتغيرات السرية
+# =========================================================
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
+# نموذج حديث لتوليد المقالات النصية
+GEMINI_MODEL = os.environ.get(
+    "GEMINI_MODEL",
+    "gemini-3.5-flash-lite"
+)
+
+
+# =========================================================
+# 2. التحقق من الإعدادات
+# =========================================================
+
+def validate_environment():
+    required_variables = {
+        "GEMINI_API_KEY": GEMINI_API_KEY,
+        "CLIENT_ID": CLIENT_ID,
+        "CLIENT_SECRET": CLIENT_SECRET,
+        "REFRESH_TOKEN": REFRESH_TOKEN,
+        "BLOG_ID": BLOG_ID,
+    }
+
+    missing = [
+        name
+        for name, value in required_variables.items()
+        if not value
+    ]
+
+    if missing:
+        raise ValueError(
+            "المتغيرات السرية التالية غير متوفرة: "
+            + ", ".join(missing)
+        )
+
+
+# =========================================================
+# 3. توليد المقال
+# =========================================================
+
 def generate_article():
-    """توليد مقال متنوع وغني بالمعلومات النافعة يغطي الجوانب الإسلامية، الثقافية، الفكرية، والعامة"""
-    print("جاري تهيئة نموذج Gemini وتحديد موضوع المقال...")
-    
-    # تهيئة العميل باستخدام الحزمة الحديثة google-genai
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    
-    # قائمة المواضيع والتصنيفات الشاملة
+    """
+    توليد مقال عربي منسق بصيغة HTML لمدونة غراس المعرفة.
+    """
+
+    print("بدء تجهيز نموذج Gemini...")
+
+    client = genai.Client(
+        api_key=GEMINI_API_KEY
+    )
+
     topics = [
         "العقيدة والتوحيد",
         "السيرة النبوية العطرة",
@@ -31,54 +77,139 @@ def generate_article():
         "علم النفس وتطوير الذات",
         "تربية الأطفال وبناء الأسرة",
         "حكم ودرر ومواعظ نافعة",
-        "محطات ثقافية ومعارف منوعة"
+        "محطات ثقافية ومعارف منوعة",
     ]
-    
+
     selected_topic = random.choice(topics)
-    
-    prompt = (
-        f"اكتب مقالاً قيماً وعميقاً باللغة العربية لصالح مدونة 'غراس المعرفة'. "
-        f"موضوع المقال الأساسي يجب أن يكون في مجال: ({selected_topic}). "
-        "اجعل المقال هادفاً، مكتوباً بأسلوب بليغ وموثوق، ومثرياً للقارئ بالعلم النافع والمعرفة الرصينة. "
-        "اكتب المقال منسقاً بصيغة HTML متكاملة (يحتوي على عنوان رئيسي H1 معبر، وعناوين فرعية H2، و فقرات مرتبة ومنسقة بدقة)."
-    )
-    
+
+    print(f"موضوع المقال المختار: {selected_topic}")
+    print(f"النموذج المستخدم: {GEMINI_MODEL}")
+    print("جاري توليد المقال...")
+
+    prompt = f"""
+أنت كاتب ومحرر محتوى عربي متخصص في إعداد المقالات
+الموثوقة والنافعة لمدونة «غراس المعرفة».
+
+المجال المطلوب: {selected_topic}
+
+المطلوب:
+1. اختر موضوعًا محددًا ومفيدًا داخل المجال المطلوب.
+2. اكتب مقالًا عربيًا أصيلًا، واضحًا، غنيًا بالمعلومات.
+3. استخدم عنوانًا رئيسيًا جذابًا ومعبّرًا.
+4. قسّم المقال إلى مقدمة وعناوين فرعية وفقرات منظمة.
+5. استخدم القوائم عند الحاجة لتسهيل القراءة.
+6. اختم بخلاصة مفيدة للقارئ.
+7. تجنب التكرار والحشو والادعاءات غير الموثقة.
+8. لا تختلق آيات قرآنية أو أحاديث نبوية أو مراجع.
+9. في المسائل الدينية، تحرَّ الدقة ولا تنسب قولًا إلى
+   القرآن أو السنة دون التثبت.
+10. في الموضوعات الطبية، تجنب التشخيص والعلاج الجازم
+    دون سند موثوق.
+11. أخرج المقال بصيغة HTML صالحة لوضعها في Blogger.
+12. استخدم عناصر HTML المناسبة مثل:
+    <h1> و <h2> و <h3> و <p> و <ul> و <li>.
+13. لا تستخدم وسوم Markdown.
+14. لا تضف أي شرح خارج المقال.
+15. لا تضع المقال داخل كتلة Markdown مثل ```html.
+
+أخرج HTML المقال فقط.
+"""
+
     response = client.models.generate_content(
-        model='gemini-1.5-flash',
+        model=GEMINI_MODEL,
         contents=prompt,
     )
-    
+
+    article_html = response.text
+
+    if not article_html or not article_html.strip():
+        raise RuntimeError(
+            "لم يُرجع Gemini محتوى نصيًا للمقال."
+        )
+
+    article_html = article_html.strip()
+
+    # عنوان مؤقت للمنشور؛ يُستخدم عنوان الموضوع المختار.
+    # يمكن تطويره لاحقًا لاستخراج عنوان H1 من HTML.
     article_title = f"{selected_topic} - غراس المعرفة"
-    return article_title, response.text
+
+    print("اكتمل توليد المقال بنجاح.")
+
+    return article_title, article_html
+
+
+# =========================================================
+# 4. النشر على Blogger
+# =========================================================
 
 def publish_to_blogger(title, content):
-    """نشر المقال على مدونة بلوجر"""
-    if not all([CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, BLOG_ID]):
-        raise ValueError("خطأ: بعض المتغيرات السرية لنشر بلوجر غير متوفرة!")
+    """
+    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0.
+    """
 
-    creds = Credentials(
-        None,
+    print("جاري تهيئة اتصال Blogger API...")
+
+    credentials = Credentials(
+        token=None,
         refresh_token=REFRESH_TOKEN,
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
-        token_uri="https://oauth2.googleapis.com/token"
+        token_uri="https://oauth2.googleapis.com/token",
     )
-    
-    service = build('blogger', 'v3', credentials=creds)
-    
+
+    service = build(
+        "blogger",
+        "v3",
+        credentials=credentials,
+        cache_discovery=False,
+    )
+
     post_body = {
-        'title': title,
-        'content': content
+        "kind": "blogger#post",
+        "title": title,
+        "content": content,
     }
-    
-    print("جاري إرسال المقال ونشره على مدونة بلوجر...")
-    result = service.posts().insert(blogId=BLOG_ID, body=post_body).execute()
-    print(f"تم النشر بنجاح تام! رابط المقال: {result.get('url')}")
+
+    print("جاري إرسال المقال إلى بلوجر...")
+
+    result = service.posts().insert(
+        blogId=BLOG_ID,
+        body=post_body,
+        isDraft=False,
+    ).execute()
+
+    post_url = result.get("url", "")
+
+    print("تم نشر المقال بنجاح.")
+    print(f"عنوان المقال: {result.get('title', title)}")
+    print(f"رابط المقال: {post_url}")
+
+    return result
+
+
+# =========================================================
+# 5. نقطة تشغيل البرنامج
+# =========================================================
+
+def main():
+    try:
+        validate_environment()
+
+        title, content = generate_article()
+
+        publish_to_blogger(
+            title=title,
+            content=content,
+        )
+
+    except Exception as error:
+        print(
+            f"فشل تنفيذ البرنامج: "
+            f"{type(error).__name__}: {error}",
+            file=sys.stderr,
+        )
+        raise
+
 
 if __name__ == "__main__":
-    try:
-        title, content = generate_article()
-        publish_to_blogger(title, content)
-    except Exception as e:
-        print(f"حدث خطأ أثناء التنفيذ: {e}")
-        exit(1)
+    main()
