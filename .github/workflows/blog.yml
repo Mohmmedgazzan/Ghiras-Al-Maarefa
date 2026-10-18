@@ -23,6 +23,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Check OAuth configuration & Proxies
+        run: |
+          python - <<'PY'
+          import os
+          for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+              value = os.environ.get(name)
+              if value:
+                  from urllib.parse import urlsplit
+                  parsed = urlsplit(value)
+                  print(f"{name}: scheme={parsed.scheme!r}, hostname_present={bool(parsed.hostname)}")
+              else:
+                  print(f"{name}: not set")
+          PY
+
       - name: Run Python Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
