@@ -17,10 +17,10 @@ CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
-# نموذج حديث لتوليد المقالات النصية
+# استخدام النموذج المعتمد والمستقر للاتصال السريع
 GEMINI_MODEL = os.environ.get(
     "GEMINI_MODEL",
-    "gemini-3.5-flash-lite"
+    "gemini-flash-latest"
 )
 
 
@@ -129,8 +129,6 @@ def generate_article():
 
     article_html = article_html.strip()
 
-    # عنوان مؤقت للمنشور؛ يُستخدم عنوان الموضوع المختار.
-    # يمكن تطويره لاحقًا لاستخراج عنوان H1 من HTML.
     article_title = f"{selected_topic} - غراس المعرفة"
 
     print("اكتمل توليد المقال بنجاح.")
@@ -154,7 +152,7 @@ def publish_to_blogger(title, content):
         refresh_token=REFRESH_TOKEN,
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
-        token_uri="https://oauth2.googleapis.com/token",
+        token_uri="[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)",
     )
 
     service = build(
