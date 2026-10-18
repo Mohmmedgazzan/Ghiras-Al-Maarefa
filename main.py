@@ -1,5 +1,6 @@
 import os
-import google.generativeai as genai
+import random
+from google import genai
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -11,20 +12,43 @@ REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
 def generate_article():
-    """توليد مقال جديد باستخدام مكتبة Gemini المستقرة"""
-    print("جاري تهيئة نموذج Gemini وتوليد المقال...")
-    genai.configure(api_key=GEMINI_API_KEY)
+    """توليد مقال متنوع وغني بالمعلومات النافعة يغطي الجوانب الإسلامية، الثقافية، الفكرية، والعامة"""
+    print("جاري تهيئة نموذج Gemini وتحديد موضوع المقال...")
     
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # تهيئة العميل باستخدام الحزمة الحديثة google-genai
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    
+    # قائمة المواضيع والتصنيفات الشاملة
+    topics = [
+        "العقيدة والتوحيد",
+        "السيرة النبوية العطرة",
+        "الفقه الإسلامي والأحكام اليومية",
+        "الثقافة العامة والفكر الإنساني",
+        "الأدب والبلاغة واللغة العربية",
+        "التاريخ الإسلامي والحضاري",
+        "قصص وعبر تاريخية وإسلامية",
+        "الصحة العامة والطب الوقائي",
+        "علم النفس وتطوير الذات",
+        "تربية الأطفال وبناء الأسرة",
+        "حكم ودرر ومواعظ نافعة",
+        "محطات ثقافية ومعارف منوعة"
+    ]
+    
+    selected_topic = random.choice(topics)
     
     prompt = (
-        "اكتب مقالاً تقنياً أو تعليمياً غنياً بالمعلومات باللغة العربية لصالح مدونة 'غراس المعرفة'. "
-        "اختر موضوعاً مفيداً (مثل: أحدث تقنيات الذكاء الاصطناعي، أو نصائح برمجية، أو أدوات الإنتاجية الرقمية). "
-        "اكتب المقال منسقاً بصيغة HTML (يحتوي على عنوان رئيسي H1، وعناوين فرعية H2، وفقات مرتبة ومفصلة)."
+        f"اكتب مقالاً قيماً وعميقاً باللغة العربية لصالح مدونة 'غراس المعرفة'. "
+        f"موضوع المقال الأساسي يجب أن يكون في مجال: ({selected_topic}). "
+        "اجعل المقال هادفاً، مكتوباً بأسلوب بليغ وموثوق، ومثرياً للقارئ بالعلم النافع والمعرفة الرصينة. "
+        "اكتب المقال منسقاً بصيغة HTML متكاملة (يحتوي على عنوان رئيسي H1 معبر، وعناوين فرعية H2، و فقرات مرتبة ومنسقة بدقة)."
     )
     
-    response = model.generate_content(prompt)
-    article_title = "مقال تقني جديد من غراس المعرفة"
+    response = client.models.generate_content(
+        model='gemini-1.5-flash',
+        contents=prompt,
+    )
+    
+    article_title = f"{selected_topic} - غراس المعرفة"
     return article_title, response.text
 
 def publish_to_blogger(title, content):
