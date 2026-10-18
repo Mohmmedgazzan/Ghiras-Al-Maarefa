@@ -1,23 +1,10 @@
 import os
-# إزالة متغيرات البروكسي فوراً لمنع تداخلها
-for proxy_env in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
-    os.environ.pop(proxy_env, None)
-
 import random
 import sys
-import httplib2
-
-# تصحيح جذري وحاسم لخطأ KeyError: 'https' في مكتبة httplib2
-try:
-    if 'https' not in httplib2.SCHEME_TO_CONNECTION:
-        from httplib2 import HTTPSConnectionWithTimeout
-        httplib2.SCHEME_TO_CONNECTION['https'] = HTTPSConnectionWithTimeout
-except Exception:
-    pass
-
+import requests
+import google.auth.transport.requests
 from google import genai
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
 
 
 # =========================================================
@@ -150,15 +137,15 @@ def generate_article():
 
 
 # =========================================================
-# 4. النشر على Blogger
+# 4. النشر على Blogger (باستخدام requests مباشرة وبدون httplib2)
 # =========================================================
 
 def publish_to_blogger(title, content):
     """
-    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0.
+    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0 ومكتبة requests المباشرة.
     """
 
-    print("جاري تهيئة اتصال Blogger API...")
+    print("جاري تهيئة المصادقة وتحديث الرمز...")
 
     credentials = Credentials(
         token=None,
@@ -168,27 +155,37 @@ def publish_to_blogger(title, content):
         token_uri="[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)",
     )
 
-    service = build(
-        "blogger",
-        "v3",
-        credentials=credentials,
-        cache_discovery=False,
-    )
+    auth_request = google.auth.transport.requests.Request()
+    credentials.refresh(auth_request)
+
+    access_token = credentials.token
+    if not access_token:
+        raise RuntimeError("فشل في الحصول على رمز الوصول (Access Token).")
+
+    url = f"[https://www.googleapis.com/blogger/v3/blogs/](https://www.googleapis.com/blogger/v3/blogs/){BLOG_ID}/posts"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
 
     post_body = {
         "kind": "blogger#post",
         "title": title,
         "content": content,
+        "isDraft": False,
     }
 
     print("جاري إرسال المقال إلى بلوجر...")
 
-    result = service.posts().insert(
-        blogId=BLOG_ID,
-        body=post_body,
-        isDraft=False,
-    ).execute()
+    response = requests.post(url, headers=headers, json=post_body)
 
+    if response.status_code != 200 and response.status_code != 201:
+        raise RuntimeError(
+            f"فشل النشر على بلوجر ({response.status_code}): {response.text}"
+        )
+
+    result = response.json()
     post_url = result.get("url", "")
 
     print("تم نشر المقال بنجاح.")
