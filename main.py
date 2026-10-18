@@ -8,14 +8,24 @@ from google.oauth2.credentials import Credentials
 
 
 # =========================================================
+# دالة تنظيف الأسرار تلقائياً من أي أقواس أو علامات تنصيص خاطئة
+# =========================================================
+def clean_secret(val):
+    if not val:
+        return val
+    # إزالة أي أقواس مسرسبة أو علامات تنصيص من GitHub Secrets
+    return str(val).strip().strip('{}\'""')
+
+
+# =========================================================
 # 1. الإعدادات والمتغيرات السرية
 # =========================================================
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-CLIENT_ID = os.environ.get("CLIENT_ID")
-CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
-REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
-BLOG_ID = os.environ.get("BLOG_ID")
+GEMINI_API_KEY = clean_secret(os.environ.get("GEMINI_API_KEY"))
+CLIENT_ID = clean_secret(os.environ.get("CLIENT_ID"))
+CLIENT_SECRET = clean_secret(os.environ.get("CLIENT_SECRET"))
+REFRESH_TOKEN = clean_secret(os.environ.get("REFRESH_TOKEN"))
+BLOG_ID = clean_secret(os.environ.get("BLOG_ID"))
 
 # استخدام النموذج المعتمد والمستقر
 GEMINI_MODEL = os.environ.get(
@@ -137,12 +147,12 @@ def generate_article():
 
 
 # =========================================================
-# 4. النشر على Blogger (باستخدام requests مباشرة وبدون httplib2)
+# 4. النشر على Blogger
 # =========================================================
 
 def publish_to_blogger(title, content):
     """
-    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0 ومكتبة requests المباشرة.
+    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0 ومكتبة requests.
     """
 
     print("جاري تهيئة المصادقة وتحديث الرمز...")
