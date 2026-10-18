@@ -1,4 +1,8 @@
 import os
+# إزالة متغيرات البروكسي فوراً في السطر الأول قبل استيراد أي مكتبة لتعطيل خطأ httplib2
+for proxy_env in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
+    os.environ.pop(proxy_env, None)
+
 import random
 import sys
 
@@ -76,7 +80,7 @@ def generate_article():
         "الصحة العامة والطب الوقائي",
         "علم النفس وتطوير الذات",
         "تربية الأطفال وبناء الأسرة",
-        "ح حكم ودرر ومواعظ نافعة",
+        "حكم ودرر ومواعظ نافعة",
         "محطات ثقافية ومعارف منوعة",
     ]
 
@@ -146,10 +150,6 @@ def publish_to_blogger(title, content):
     """
 
     print("جاري تهيئة اتصال Blogger API...")
-
-    # إزالة متغيرات البروكسي التي تسبب خطأ KeyError: 'https' مع httplib2 في GitHub Actions
-    for proxy_env in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
-        os.environ.pop(proxy_env, None)
 
     credentials = Credentials(
         token=None,
