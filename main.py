@@ -1,9 +1,9 @@
 import os
-import google.generativeai as genai
+from google import genai
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-# 1. جلب الأسرار والمتغيرات من بيئة التشغيل (GitHub Secrets)
+# 1. جلب الأسرار من بيئة التشغيل
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
@@ -11,11 +11,11 @@ REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
 def generate_article():
-    """توليد مقال جديد ومفيد تلقائياً باستخدام نموذج Gemini"""
-    genai.configure(api_key=GEMINI_API_KEY)
+    """توليد مقال جديد باستخدام مكتبة جوجل الحديثة"""
+    print("جاري تهيئة العميل وتوليد المقال بذكاء Gemini...")
     
-    # استخدام نموذج Gemini السريع والمستقر
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # تهيئة العميل بالطريقة الحديثة
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     prompt = (
         "اكتب مقالاً تقنياً أو تعليمياً غنياً بالمعلومات باللغة العربية لصالح مدونة 'غراس المعرفة'. "
@@ -23,21 +23,19 @@ def generate_article():
         "اكتب المقال منسقاً بصيغة HTML (يحتوي على عنوان رئيسي H1، وعناوين فرعية H2، وفقات مرتبة ومفصلة)."
     )
     
-    print("جاري توليد المقال بواسطة ذكاء Gemini الاصطناعي...")
-    response = model.generate_content(prompt)
-    article_content = response.text
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+    )
     
-    # استخراج عنوان افتراضي أو عنوان مناسب من المقال
     article_title = "مقال تقني جديد من غراس المعرفة"
-    
-    return article_title, article_content
+    return article_title, response.text
 
 def publish_to_blogger(title, content):
-    """نشر المقال تلقائياً على مدونة Blogger باستخدام مفاتيح الاعتماد"""
+    """نشر المقال على مدونة بلوجر"""
     if not all([CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, BLOG_ID]):
-        raise ValueError("خطأ: بعض المتغيرات السرية المطلوبة لنشر بلوجر غير متوفرة في البيئة!")
+        raise ValueError("خطأ: بعض المتغيرات السرية لنشر بلوجر غير متوفرة!")
 
-    # إعداد بيانات المصادقة عبر OAuth2
     creds = Credentials(
         None,
         refresh_token=REFRESH_TOKEN,
@@ -53,7 +51,7 @@ def publish_to_blogger(title, content):
         'content': content
     }
     
-    print("جاري إرسال ونشر المقال على مدونة بلوجر...")
+    print("جاري إرسال المقال ونشره على مدونة بلوجر...")
     posts_resource = service.posts()
     request = posts_resource.insert(blogId=BLOG_ID, body=post_body)
     result = request.execute()
@@ -65,5 +63,5 @@ if __name__ == "__main__":
         title, content = generate_article()
         publish_to_blogger(title, content)
     except Exception as e:
-        print(f"حدث خطأ أثناء عملية التوليد أو النشر: {e}")
+        print(f"حدث خطأ أثناء التنفيذ: {e}")
         exit(1)
