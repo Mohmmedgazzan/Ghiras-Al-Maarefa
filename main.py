@@ -17,7 +17,7 @@ CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
-# استخدام النموذج المعتمد والمستقر للاتصال السريع
+# استخدام النموذج المعتمد والمستقر
 GEMINI_MODEL = os.environ.get(
     "GEMINI_MODEL",
     "gemini-flash-latest"
@@ -76,7 +76,7 @@ def generate_article():
         "الصحة العامة والطب الوقائي",
         "علم النفس وتطوير الذات",
         "تربية الأطفال وبناء الأسرة",
-        "حكم ودرر ومواعظ نافعة",
+        "ح حكم ودرر ومواعظ نافعة",
         "محطات ثقافية ومعارف منوعة",
     ]
 
@@ -147,6 +147,10 @@ def publish_to_blogger(title, content):
 
     print("جاري تهيئة اتصال Blogger API...")
 
+    # إزالة متغيرات البروكسي التي تسبب خطأ KeyError: 'https' مع httplib2 في GitHub Actions
+    for proxy_env in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+        os.environ.pop(proxy_env, None)
+
     credentials = Credentials(
         token=None,
         refresh_token=REFRESH_TOKEN,
@@ -202,8 +206,7 @@ def main():
 
     except Exception as error:
         print(
-            f"فشل تنفيذ البرنامج: "
-            f"{type(error).__name__}: {error}",
+            f"فشل تنفيذ البرنامج: {type(error).__name__}: {error}",
             file=sys.stderr,
         )
         raise
