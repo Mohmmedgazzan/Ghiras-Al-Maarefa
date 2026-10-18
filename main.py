@@ -1,31 +1,53 @@
 import os
 import random
 import sys
+import json
 import requests
-import google.auth.transport.requests
 from google import genai
-from google.oauth2.credentials import Credentials
 
 
 # =========================================================
-# دالة تنظيف الأسرار تلقائياً من أي أقواس أو علامات تنصيص خاطئة
+# دالة ذكية لتنظيف الأسرار واستخراج القيم تلقائياً حتى لو لُصق ملف JSON كامل
 # =========================================================
-def clean_secret(val):
+def clean_secret(val, expected_key=None):
     if not val:
-        return val
-    # إزالة أي أقواس مسرسبة أو علامات تنصيص من GitHub Secrets
-    return str(val).strip().strip('{}\'""')
+        return ""
+    val_str = str(val).strip()
+    
+    # إذا كان المدخل عبارة عن JSON أو يحتوي على أقواس
+    if val_str.startswith("{") and val_str.endswith("}"):
+        try:
+            data = json.loads(val_str)
+            if "installed" in data:
+                data = data["installed"]
+            elif "web" in data:
+                data = data["web"]
+            
+            if expected_key and expected_key in data:
+                return str(data[expected_key]).strip()
+            
+            # البحث عن المفتاح المناسب تلقائياً
+            for k in ["client_id", "client_secret", "refresh_token", "blog_id"]:
+                if k in data:
+                    return str(data[k]).strip()
+                    
+            if data:
+                return str(list(data.values())[0]).strip()
+        except Exception:
+            pass
+            
+    return val_str.strip('{}\'""')
 
 
 # =========================================================
 # 1. الإعدادات والمتغيرات السرية
 # =========================================================
 
+CLIENT_ID = clean_secret(os.environ.get("CLIENT_ID"), "client_id")
+CLIENT_SECRET = clean_secret(os.environ.get("CLIENT_SECRET"), "client_secret")
+REFRESH_TOKEN = clean_secret(os.environ.get("REFRESH_TOKEN"), "refresh_token")
+BLOG_ID = clean_secret(os.environ.get("BLOG_ID"), "blog_id")
 GEMINI_API_KEY = clean_secret(os.environ.get("GEMINI_API_KEY"))
-CLIENT_ID = clean_secret(os.environ.get("CLIENT_ID"))
-CLIENT_SECRET = clean_secret(os.environ.get("CLIENT_SECRET"))
-REFRESH_TOKEN = clean_secret(os.environ.get("REFRESH_TOKEN"))
-BLOG_ID = clean_secret(os.environ.get("BLOG_ID"))
 
 # استخدام النموذج المعتمد والمستقر
 GEMINI_MODEL = os.environ.get(
@@ -147,30 +169,38 @@ def generate_article():
 
 
 # =========================================================
-# 4. النشر على Blogger
+# 4. النشر على Blogger (بشكل مباشر وآمن تماماً عبر requests)
 # =========================================================
 
 def publish_to_blogger(title, content):
     """
-    نشر المقال على مدونة بلوجر باستخدام OAuth 2.0 ومكتبة requests.
+    نشر المقال على بلوجر باستخدام طلبات HTTP مباشرة وآمنة.
     """
 
-    print("جاري تهيئة المصادقة وتحديث الرمز...")
+    print("جاري طلب رمز الوصول (Access Token) مباشرة...")
 
-    credentials = Credentials(
-        token=None,
-        refresh_token=REFRESH_TOKEN,
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        token_uri="[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)",
-    )
+    token_url = "[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)"
+    payload = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "refresh_token": REFRESH_TOKEN,
+        "grant_type": "refresh_token",
+    }
 
-    auth_request = google.auth.transport.requests.Request()
-    credentials.refresh(auth_request)
+    token_response = requests.post(token_url, data=payload)
 
-    access_token = credentials.token
+    if token_response.status_code != 200:
+        raise RuntimeError(
+            f"فشل تجديد الرمز ({token_response.status_code}): {token_response.text}"
+        )
+
+    token_data = token_response.json()
+    access_token = token_data.get("access_token")
+
     if not access_token:
-        raise RuntimeError("فشل في الحصول على رمز الوصول (Access Token).")
+        raise RuntimeError(
+            f"لم يتم العثور على access_token في الاستجابة: {token_response.text}"
+        )
 
     url = f"[https://www.googleapis.com/blogger/v3/blogs/](https://www.googleapis.com/blogger/v3/blogs/){BLOG_ID}/posts"
     
