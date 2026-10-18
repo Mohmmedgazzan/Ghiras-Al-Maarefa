@@ -1,5 +1,5 @@
 import os
-from google import genai
+import google.generativeai as genai
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -11,11 +11,11 @@ REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN")
 BLOG_ID = os.environ.get("BLOG_ID")
 
 def generate_article():
-    """توليد مقال جديد باستخدام مكتبة جوجل الحديثة"""
-    print("جاري تهيئة العميل وتوليد المقال بذكاء Gemini...")
+    """توليد مقال جديد باستخدام مكتبة Gemini المستقرة"""
+    print("جاري تهيئة نموذج Gemini وتوليد المقال...")
+    genai.configure(api_key=GEMINI_API_KEY)
     
-    # تهيئة العميل بالطريقة الحديثة
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
     
     prompt = (
         "اكتب مقالاً تقنياً أو تعليمياً غنياً بالمعلومات باللغة العربية لصالح مدونة 'غراس المعرفة'. "
@@ -23,11 +23,7 @@ def generate_article():
         "اكتب المقال منسقاً بصيغة HTML (يحتوي على عنوان رئيسي H1، وعناوين فرعية H2، وفقات مرتبة ومفصلة)."
     )
     
-    response = client.models.generate_content(
-        model='gemini-2.5-flash',
-        contents=prompt,
-    )
-    
+    response = model.generate_content(prompt)
     article_title = "مقال تقني جديد من غراس المعرفة"
     return article_title, response.text
 
@@ -52,10 +48,7 @@ def publish_to_blogger(title, content):
     }
     
     print("جاري إرسال المقال ونشره على مدونة بلوجر...")
-    posts_resource = service.posts()
-    request = posts_resource.insert(blogId=BLOG_ID, body=post_body)
-    result = request.execute()
-    
+    result = service.posts().insert(blogId=BLOG_ID, body=post_body).execute()
     print(f"تم النشر بنجاح تام! رابط المقال: {result.get('url')}")
 
 if __name__ == "__main__":
